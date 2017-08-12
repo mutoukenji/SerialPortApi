@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="parity_value">
+        <item>0</item>
+        <item>1</item>
+        <item>2</item>
+        <item>-1</item>
+    </string-array>
+    <string-array name="parity_text">
+        <item>偶校验</item>
+        <item>奇校验</item>
+        <item>空格校验</item>
+        <item>无校验</item>
+    </string-array>
+</resources>
