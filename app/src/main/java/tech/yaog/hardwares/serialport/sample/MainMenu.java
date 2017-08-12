@@ -62,10 +62,11 @@ public class MainMenu extends Activity {
         final Button buttonAbout = (Button)findViewById(R.id.ButtonAbout);
         buttonAbout.setOnClickListener(new View.OnClickListener() {
 			public void onClick(View v) {
-				AlertDialog.Builder builder = new AlertDialog.Builder(MainMenu.this);
-				builder.setTitle("About");
-				builder.setMessage(R.string.about_msg);
-				builder.show();
+//				AlertDialog.Builder builder = new AlertDialog.Builder(MainMenu.this);
+//				builder.setTitle("About");
+//				builder.setMessage(R.string.about_msg);
+//				builder.show();
+				startActivity(new Intent(MainMenu.this, Console2Activity.class));
 			}
 		});
 
