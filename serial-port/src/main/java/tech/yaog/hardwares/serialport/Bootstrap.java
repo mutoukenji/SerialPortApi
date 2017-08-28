@@ -123,11 +123,10 @@ public class Bootstrap {
         byte[] data = null;
         if (message instanceof byte[]) {
             data = (byte[]) message;
-        }
-        else {
+        } else {
             if (encoders != null) {
                 for (AbstractEncoder encoder : encoders) {
-                    java.lang.reflect.Type[] types = ((ParameterizedType)encoder.getClass().getGenericSuperclass()).getActualTypeArguments();
+                    java.lang.reflect.Type[] types = ((ParameterizedType) encoder.getClass().getGenericSuperclass()).getActualTypeArguments();
                     if (types.length == 1 && message.getClass().equals(types[0])) {
                         try {
                             byte[] tmp = encoder.encode(message);
@@ -148,9 +147,8 @@ public class Bootstrap {
             } catch (IOException e) {
                 e.printStackTrace();
             }
-        }
-        else {
-            Log.e(TAG, "cannot encode message: "+message);
+        } else {
+            Log.e(TAG, "cannot encode message: " + message);
         }
         return this;
     }
@@ -164,37 +162,46 @@ public class Bootstrap {
         receiveThread = new Thread(new Runnable() {
             @Override
             public void run() {
-                byte[] buffer = new byte[1024*1024];
+                byte[] buffer = new byte[1024 * 1024];
                 while (!Thread.interrupted()) {
                     try {
                         byte[] data = new byte[0];
                         int read;
-                        try {
-                            while ((read = is.read(buffer)) > 0) {
+                        boolean isPack = false;
+                        int emptyCount = 0;
+                        do {
+                            if (is.available() > 0 && (read = is.read(buffer)) > 0) {
                                 int position = data.length;
                                 data = Arrays.copyOf(data, position + read);
                                 System.arraycopy(buffer, 0, data, position, read);
+                                emptyCount = 0;
                             }
-                            if (data.length > 0) {
-                                final byte[] h_data = data;
-                                workgroup.execute(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        handle(h_data);
-                                    }
-                                });
+                            else {
+                                if (++emptyCount >= 10) {
+                                    isPack = true;
+                                }
+                                TimeUnit.MILLISECONDS.sleep(1);
                             }
-                        } catch (IOException e) {
-                            e.printStackTrace();
                         }
-                        TimeUnit.MILLISECONDS.sleep(100);
+                        while (!isPack);
+                        if (data.length > 0) {
+                            final byte[] h_data = data;
+                            workgroup.execute(new Runnable() {
+                                @Override
+                                public void run() {
+                                    handle(h_data);
+                                }
+                            });
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
                     } catch (InterruptedException e) {
                         break;
                     }
                 }
             }
         });
-        receiveThread.setName(path+" Receiver");
+        receiveThread.setName(path + " Receiver");
         receiveThread.setPriority(Thread.MAX_PRIORITY);
         receiveThread.start();
 
@@ -224,10 +231,10 @@ public class Bootstrap {
         boolean handled = false;
         if (handlers != null) {
             for (AbstractHandler handler : handlers) {
-                java.lang.reflect.Type[] types = ((ParameterizedType)handler.getClass().getGenericSuperclass()).getActualTypeArguments();
+                java.lang.reflect.Type[] types = ((ParameterizedType) handler.getClass().getGenericSuperclass()).getActualTypeArguments();
                 if (types.length == 1 && message.getClass().equals(types[0])) {
                     try {
-                        if((handled = handler.handle(message, this))) {
+                        if ((handled = handler.handle(message, this))) {
                             break;
                         }
                     } catch (Exception e) {
@@ -237,7 +244,7 @@ public class Bootstrap {
             }
         }
         if (!handled) {
-            Log.e(TAG, "Message not handled: data="+message);
+            Log.e(TAG, "Message not handled: data=" + message);
         }
     }
 }

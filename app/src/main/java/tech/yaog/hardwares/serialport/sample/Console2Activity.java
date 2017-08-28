@@ -9,6 +9,7 @@ import android.widget.EditText;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
+import java.util.Arrays;
 import java.util.Date;
 
 import tech.yaog.hardwares.serialport.AbstractDecoder;
@@ -51,7 +52,7 @@ public class Console2Activity extends Activity {
                     .decode(new AbstractDecoder<String>() {
                         @Override
                         public String decode(byte[] data) throws Exception {
-                            return new String(data, Charset.forName("UTF-8"));
+                            return new String(data, "UTF-8");
                         }
                     })
                     .encode(new AbstractEncoder<String>() {
@@ -63,15 +64,15 @@ public class Console2Activity extends Activity {
                     .handle(new AbstractHandler<String>() {
                         @Override
                         public boolean handle(final String message, Bootstrap client) throws Exception {
-                            final String re = "RE:"+message;
+                            final String re = "recv: "+message;
+                            client.send(re);
                             handler.post(new Runnable() {
                                              @Override
                                              public void run() {
-                                                 mReception.append(new Date().toString() + " <<<:" + message + "\n");
-                                                 mReception.append(new Date().toString() + " >>>" + re + "\n");
+                                                 mReception.append(new Date().toString() + " Rx:" + message + "\n");
+                                                 mReception.append(new Date().toString() + " Tx:" + re + "\n");
                                              }
                                          });
-                            client.send(re);
                             return true;
                         }
                     })

@@ -1,5 +1,29 @@
 apply plugin: 'com.android.library'
 
+ext {
+    bintrayRepo = 'maven'
+    bintrayName = 'serial-port'
+
+    publishedGroupId = 'tech.yaog.hardwares'
+    libraryName = 'SerialPort'
+    artifact = 'serial-port'
+
+    libraryDescription = 'Serial Port API for Android'
+
+    siteUrl = 'https://github.com/mutoukenji/SerialPortApi'
+    gitUrl = 'https://github.com/mutoukenji/SerialPortApi.git'
+
+    libraryVersion = '1.0.1'
+
+    developerId = 'mutoukenji'
+    developerName = 'MutouKenji'
+    developerEmail = 'mutoukenji@gmail.com'
+
+    licenseName = 'Apache-2.0'
+    licenseUrl = 'https://raw.githubusercontent.com/mutoukenji/SerialPortApi/master/LICENSE'
+    allLicenses = ["Apache-2.0"]
+}
+
 android {
     compileSdkVersion 26
     buildToolsVersion "26.0.0"
@@ -29,3 +53,14 @@ android {
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
 }
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+tasks.withType(Javadoc) {
+    options.encoding = 'UTF-8'
+}
+
+apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/installv1.gradle'
+apply from: 'https://raw.githubusercontent.com/nuuneoi/JCenter/master/bintrayv1.gradle'
