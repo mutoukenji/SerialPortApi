@@ -66,7 +66,7 @@ public class MainMenu extends Activity {
 //				builder.setTitle("About");
 //				builder.setMessage(R.string.about_msg);
 //				builder.show();
-				startActivity(new Intent(MainMenu.this, Console2Activity.class));
+				startActivity(new Intent(MainMenu.this, PaymentActivity.class));
 			}
 		});
 

@@ -244,7 +244,7 @@ public class Bootstrap {
             }
         }
         if (!handled) {
-            Log.e(TAG, "Message not handled: data=" + message);
+            Log.e(TAG, "Message not handled: data=" + Arrays.toString(data));
         }
     }
 }
