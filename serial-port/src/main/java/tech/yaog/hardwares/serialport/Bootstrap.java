@@ -1,7 +1,5 @@
 package tech.yaog.hardwares.serialport;
 
-import android.util.Log;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,6 +28,8 @@ public class Bootstrap {
     private int parity;
     private int stopbits;
     private int flags;
+    private Logger logger;
+    private boolean vvv = false;
     private List<AbstractDecoder> decoders = new ArrayList<>();
     private List<AbstractEncoder> encoders = new ArrayList<>();
     private List<AbstractHandler> handlers = new ArrayList<>();
@@ -80,6 +80,16 @@ public class Bootstrap {
 
     public void setFlags(int flags) {
         this.flags = flags;
+    }
+
+    public Bootstrap vvv(boolean vvv) {
+        this.vvv = vvv;
+        return this;
+    }
+
+    public Bootstrap logger(Logger logger) {
+        this.logger = logger;
+        return this;
     }
 
     public Bootstrap decode(AbstractDecoder... decoders) {
@@ -144,11 +154,16 @@ public class Bootstrap {
         if (data != null) {
             try {
                 serialPort.getOutputStream().write(data);
+                if (vvv && logger != null) {
+                    logger.v(TAG, "Tx: %s", Arrays.toString(data));
+                }
             } catch (IOException e) {
                 e.printStackTrace();
             }
         } else {
-            Log.e(TAG, "cannot encode message: " + message);
+            if (logger != null) {
+                logger.e(TAG, "cannot encode message: %s", message);
+            }
         }
         return this;
     }
@@ -185,6 +200,9 @@ public class Bootstrap {
                         }
                         while (!isPack);
                         if (data.length > 0) {
+                            if (vvv && logger != null) {
+                                logger.v(TAG, "Rx: %s", Arrays.toString(data));
+                            }
                             final byte[] h_data = data;
                             workgroup.execute(new Runnable() {
                                 @Override
@@ -244,7 +262,9 @@ public class Bootstrap {
             }
         }
         if (!handled) {
-            Log.e(TAG, "Message not handled: data=" + Arrays.toString(data));
+            if (logger != null) {
+                logger.e(TAG, "Message not handled: data=" + Arrays.toString(data));
+            }
         }
     }
 }
