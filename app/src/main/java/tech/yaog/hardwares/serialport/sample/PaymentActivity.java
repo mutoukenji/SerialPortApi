@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -16,12 +18,15 @@ import tech.yaog.hardwares.serialport.AbstractHandler;
 import tech.yaog.hardwares.serialport.Bootstrap;
 import tech.yaog.hardwares.serialport.SerialPort;
 
-public class PaymentActivity extends Activity {
+public class PaymentActivity extends Activity implements View.OnClickListener {
 
     private Bootstrap bootstrap;
     private Handler handler;
     private TextView textView;
     private ScrollView scrollView;
+    private Button selectButton;
+
+    private int sel = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -30,6 +35,8 @@ public class PaymentActivity extends Activity {
 
         textView = findViewById(R.id.textView);
         scrollView = findViewById(R.id.scrollView);
+        selectButton = findViewById(R.id.Select);
+        selectButton.setOnClickListener(this);
         handler = new Handler();
     }
 
@@ -51,6 +58,16 @@ public class PaymentActivity extends Activity {
                             PayFrame frame = PayFrame.fromBytes(data);
                             if (frame != null && frame.getCommand() == HelloCommand.ID) {
                                 return new HelloCommand();
+                            }
+                            return null;
+                        }
+                    })
+                    .decode(new AbstractDecoder<SelectCommand>() {
+                        @Override
+                        public SelectCommand decode(byte[] data) throws Exception {
+                            PayFrame frame = PayFrame.fromBytes(data);
+                            if (frame != null && frame.getCommand() == SelectCommand.ID) {
+                                return new SelectCommand();
                             }
                             return null;
                         }
@@ -77,6 +94,36 @@ public class PaymentActivity extends Activity {
                             return true;
                         }
                     })
+                    .handle(new AbstractHandler<SelectCommand>() {
+                        @Override
+                        public boolean handle(SelectCommand message, Bootstrap client) throws Exception {
+                            if (sel > 0) {
+                                client.send(new SelectReplyCommand(SelectReplyCommand.RESULT_OK, (byte) 0x00, (byte) sel).toFrame());
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        textView.append(new Date().toString());
+                                        textView.append(" ");
+                                        textView.append("Do Select\n");
+                                        scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+                                    }
+                                });
+                            }
+                            else {
+                                client.send(new SelectReplyCommand(SelectReplyCommand.RESULT_NG, (byte) 0x00, (byte) 0x00).toFrame());
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        textView.append(new Date().toString());
+                                        textView.append(" ");
+                                        textView.append("Check Select\n");
+                                        scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+                                    }
+                                });
+                            }
+                            return true;
+                        }
+                    })
                     .start();
         } catch (IOException e) {
             e.printStackTrace();
@@ -89,5 +136,10 @@ public class PaymentActivity extends Activity {
         if (bootstrap != null) {
             bootstrap.stop();
         }
+    }
+
+    @Override
+    public void onClick(View view) {
+        sel = 5;
     }
 }
