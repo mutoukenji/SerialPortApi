@@ -13,7 +13,7 @@ ext {
     siteUrl = 'https://github.com/mutoukenji/SerialPortApi'
     gitUrl = 'https://github.com/mutoukenji/SerialPortApi.git'
 
-    libraryVersion = '1.0.3'
+    libraryVersion = '1.0.4'
 
     developerId = 'mutoukenji'
     developerName = 'MutouKenji'
@@ -26,7 +26,6 @@ ext {
 
 android {
     compileSdkVersion 26
-    buildToolsVersion "26.0.0"
 
     defaultConfig {
         minSdkVersion 14
@@ -39,7 +38,7 @@ android {
     }
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled true
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
@@ -51,7 +50,7 @@ android {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
 }
 
 tasks.withType(JavaCompile) {

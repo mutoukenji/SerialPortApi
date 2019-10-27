@@ -28,6 +28,7 @@ public class Bootstrap {
     private int parity;
     private int stopbits;
     private int flags;
+    private boolean rtscts;
     private Logger logger;
     private boolean vvv = false;
     private List<AbstractDecoder> decoders = new ArrayList<>();
@@ -82,6 +83,14 @@ public class Bootstrap {
         this.flags = flags;
     }
 
+    public boolean isRtscts() {
+        return rtscts;
+    }
+
+    public void setRtscts(boolean rtscts) {
+        this.rtscts = rtscts;
+    }
+
     public Bootstrap vvv(boolean vvv) {
         this.vvv = vvv;
         return this;
@@ -120,6 +129,10 @@ public class Bootstrap {
     }
 
     public Bootstrap configure(String path, int baudrate, int csize, int parity, int stopbits, int flags) {
+        return configure(path, baudrate, csize, parity, stopbits, false, flags);
+    }
+
+    public Bootstrap configure(String path, int baudrate, int csize, int parity, int stopbits, boolean rtscts, int flags) {
         this.path = path;
         this.baudrate = baudrate;
         this.csize = csize;
@@ -172,7 +185,7 @@ public class Bootstrap {
         //创建等待队列
         BlockingQueue<Runnable> bqueue = new ArrayBlockingQueue<>(20);
         workgroup = new ThreadPoolExecutor(2, 10, 5, TimeUnit.SECONDS, bqueue);
-        serialPort = new SerialPort(new File(path), baudrate, csize, parity, stopbits, flags);
+        serialPort = new SerialPort(new File(path), baudrate, csize, parity, stopbits, rtscts, flags);
         final InputStream is = serialPort.getInputStream();
         receiveThread = new Thread(new Runnable() {
             @Override

@@ -74,7 +74,7 @@ static speed_t getBaudrate(jint baudrate)
  * Signature: (Ljava/lang/String;II)Ljava/io/FileDescriptor;
  */
 JNIEXPORT jobject JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_open
-  (JNIEnv *env, jclass thiz, jstring path, jint baudrate, jint csize, jint parity, jint stopbits, jint flags)
+  (JNIEnv *env, jclass thiz, jstring path, jint baudrate, jint csize, jint parity, jint stopbits, jboolean rtscts, jint flags)
 {
 	int fd;
 	speed_t speed;
@@ -172,6 +172,11 @@ JNIEXPORT jobject JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_open
             default:
                 LOGE("Unsupported stop bits\n");
                 break;
+        }
+
+        if (rtscts == 1)
+        {
+            cfg.c_cflag |= CRTSCTS;
         }
 
 		if (tcsetattr(fd, TCSANOW, &cfg))
