@@ -123,6 +123,9 @@ JNIEXPORT jobject JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_open
 		cfsetispeed(&cfg, speed);
 		cfsetospeed(&cfg, speed);
 
+		// close CTS/RTS
+		cfg.c_cflag &= ~CRTSCTS;
+
         cfg.c_cflag &= ~CSIZE;
         switch (csize) {
             case 5:
