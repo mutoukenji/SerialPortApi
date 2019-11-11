@@ -1,5 +1,5 @@
--keep class tech.yaog.hardwares.serialport.*；
-
--keepclassmembers class ** {
+-keepparameternames
+-keep class tech.yaog.hardwares.serialport.*{
     public *;
+    public <methods>;
 }
