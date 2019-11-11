@@ -49,85 +49,81 @@ public class PaymentActivity extends Activity implements View.OnClickListener {
         int csize = Integer.parseInt(sp.getString("CSIZE", SerialPort.CSIZE_8+""));
         int parity = Integer.parseInt(sp.getString("PARITY", SerialPort.PARITY_NONE+""));
         int stopbits = Integer.parseInt(sp.getString("STOPBITS", SerialPort.STOP_BIT_1+""));
-        try {
-            bootstrap = new Bootstrap()
-                    .configure(path, baudrate, csize, parity, stopbits, 0)
-                    .decode(new AbstractDecoder<HelloCommand>() {
-                        @Override
-                        public HelloCommand decode(byte[] data) throws Exception {
-                            PayFrame frame = PayFrame.fromBytes(data);
-                            if (frame != null && frame.getCommand() == HelloCommand.ID) {
-                                return new HelloCommand();
+        bootstrap = new Bootstrap()
+                .configure(path, baudrate, csize, parity, stopbits, 0)
+                .decode(new AbstractDecoder<HelloCommand>() {
+                    @Override
+                    public HelloCommand decode(byte[] data) {
+                        PayFrame frame = PayFrame.fromBytes(data);
+                        if (frame != null && frame.getCommand() == HelloCommand.ID) {
+                            return new HelloCommand();
+                        }
+                        return null;
+                    }
+                })
+                .decode(new AbstractDecoder<SelectCommand>() {
+                    @Override
+                    public SelectCommand decode(byte[] data) {
+                        PayFrame frame = PayFrame.fromBytes(data);
+                        if (frame != null && frame.getCommand() == SelectCommand.ID) {
+                            return new SelectCommand();
+                        }
+                        return null;
+                    }
+                })
+                .encode(new AbstractEncoder<PayReplyFrame>() {
+                    @Override
+                    public byte[] encode(PayReplyFrame message) {
+                        return message.toBytes();
+                    }
+                })
+                .handle(new AbstractHandler<HelloCommand>() {
+                    @Override
+                    public boolean handle(HelloCommand message, Bootstrap client) {
+                        client.send(new HelloReplyCommand("0000", HelloReplyCommand.RESULT_OK).toFrame());
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                textView.append(new Date().toString());
+                                textView.append(" ");
+                                textView.append("Hello\n");
+                                scrollView.fullScroll(ScrollView.FOCUS_DOWN);
                             }
-                            return null;
-                        }
-                    })
-                    .decode(new AbstractDecoder<SelectCommand>() {
-                        @Override
-                        public SelectCommand decode(byte[] data) throws Exception {
-                            PayFrame frame = PayFrame.fromBytes(data);
-                            if (frame != null && frame.getCommand() == SelectCommand.ID) {
-                                return new SelectCommand();
-                            }
-                            return null;
-                        }
-                    })
-                    .encode(new AbstractEncoder<PayReplyFrame>() {
-                        @Override
-                        public byte[] encode(PayReplyFrame message) throws Exception {
-                            return message.toBytes();
-                        }
-                    })
-                    .handle(new AbstractHandler<HelloCommand>() {
-                        @Override
-                        public boolean handle(HelloCommand message, Bootstrap client) throws Exception {
-                            client.send(new HelloReplyCommand("0000", HelloReplyCommand.RESULT_OK).toFrame());
+                        });
+                        return true;
+                    }
+                })
+                .handle(new AbstractHandler<SelectCommand>() {
+                    @Override
+                    public boolean handle(SelectCommand message, Bootstrap client) {
+                        if (sel > 0) {
+                            client.send(new SelectReplyCommand(SelectReplyCommand.RESULT_OK, (byte) 0x00, (byte) sel).toFrame());
                             handler.post(new Runnable() {
                                 @Override
                                 public void run() {
                                     textView.append(new Date().toString());
                                     textView.append(" ");
-                                    textView.append("Hello\n");
+                                    textView.append("Do Select\n");
                                     scrollView.fullScroll(ScrollView.FOCUS_DOWN);
                                 }
                             });
-                            return true;
                         }
-                    })
-                    .handle(new AbstractHandler<SelectCommand>() {
-                        @Override
-                        public boolean handle(SelectCommand message, Bootstrap client) throws Exception {
-                            if (sel > 0) {
-                                client.send(new SelectReplyCommand(SelectReplyCommand.RESULT_OK, (byte) 0x00, (byte) sel).toFrame());
-                                handler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        textView.append(new Date().toString());
-                                        textView.append(" ");
-                                        textView.append("Do Select\n");
-                                        scrollView.fullScroll(ScrollView.FOCUS_DOWN);
-                                    }
-                                });
-                            }
-                            else {
-                                client.send(new SelectReplyCommand(SelectReplyCommand.RESULT_NG, (byte) 0x00, (byte) 0x00).toFrame());
-                                handler.post(new Runnable() {
-                                    @Override
-                                    public void run() {
-                                        textView.append(new Date().toString());
-                                        textView.append(" ");
-                                        textView.append("Check Select\n");
-                                        scrollView.fullScroll(ScrollView.FOCUS_DOWN);
-                                    }
-                                });
-                            }
-                            return true;
+                        else {
+                            client.send(new SelectReplyCommand(SelectReplyCommand.RESULT_NG, (byte) 0x00, (byte) 0x00).toFrame());
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    textView.append(new Date().toString());
+                                    textView.append(" ");
+                                    textView.append("Check Select\n");
+                                    scrollView.fullScroll(ScrollView.FOCUS_DOWN);
+                                }
+                            });
                         }
-                    })
-                    .start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                        return true;
+                    }
+                })
+                .start();
     }
 
     @Override

@@ -8,6 +8,7 @@ import android.support.annotation.Nullable;
 import android.widget.EditText;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Date;
@@ -46,40 +47,46 @@ public class Console2Activity extends Activity {
         int csize = Integer.parseInt(sp.getString("CSIZE", SerialPort.CSIZE_8+""));
         int parity = Integer.parseInt(sp.getString("PARITY", SerialPort.PARITY_NONE+""));
         int stopbits = Integer.parseInt(sp.getString("STOPBITS", SerialPort.STOP_BIT_1+""));
-        try {
-            bootstrap = new Bootstrap()
-                    .configure(path, baudrate, csize, parity, stopbits, 0)
-                    .decode(new AbstractDecoder<String>() {
-                        @Override
-                        public String decode(byte[] data) throws Exception {
+        bootstrap = new Bootstrap()
+                .configure(path, baudrate, csize, parity, stopbits, 0)
+                .decode(new AbstractDecoder<String>() {
+                    @Override
+                    public String decode(byte[] data) {
+                        try {
                             return new String(data, "UTF-8");
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
                         }
-                    })
-                    .encode(new AbstractEncoder<String>() {
-                        @Override
-                        public byte[] encode(String message) throws Exception {
+                        return null;
+                    }
+                })
+                .encode(new AbstractEncoder<String>() {
+                    @Override
+                    public byte[] encode(String message) {
+                        try {
                             return message.getBytes("UTF-8");
+                        } catch (UnsupportedEncodingException e) {
+                            e.printStackTrace();
                         }
-                    })
-                    .handle(new AbstractHandler<String>() {
-                        @Override
-                        public boolean handle(final String message, Bootstrap client) throws Exception {
-                            final String re = "recv: "+message;
-                            client.send(re);
-                            handler.post(new Runnable() {
-                                             @Override
-                                             public void run() {
-                                                 mReception.append(new Date().toString() + " Rx:" + message + "\n");
-                                                 mReception.append(new Date().toString() + " Tx:" + re + "\n");
-                                             }
-                                         });
-                            return true;
-                        }
-                    })
-                    .start();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+                        return null;
+                    }
+                })
+                .handle(new AbstractHandler<String>() {
+                    @Override
+                    public boolean handle(final String message, Bootstrap client) {
+                        final String re = "recv: "+message;
+                        client.send(re);
+                        handler.post(new Runnable() {
+                                         @Override
+                                         public void run() {
+                                             mReception.append(new Date().toString() + " Rx:" + message + "\n");
+                                             mReception.append(new Date().toString() + " Tx:" + re + "\n");
+                                         }
+                                     });
+                        return true;
+                    }
+                })
+                .start();
     }
 
     @Override

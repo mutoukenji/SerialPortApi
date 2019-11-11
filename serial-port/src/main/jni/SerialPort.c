@@ -74,7 +74,7 @@ static speed_t getBaudrate(jint baudrate)
  * Signature: (Ljava/lang/String;II)Ljava/io/FileDescriptor;
  */
 JNIEXPORT jobject JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_open
-  (JNIEnv *env, jclass thiz, jstring path, jint baudrate, jint csize, jint parity, jint stopbits, jboolean rtscts, jint flags)
+  (JNIEnv *env, jclass thiz, jstring path, jint baudrate, jint csize, jint parity, jint stopbits, jboolean rtscts, jboolean xonxoff, jint flags)
 {
 	int fd;
 	speed_t speed;
@@ -177,9 +177,17 @@ JNIEXPORT jobject JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_open
                 break;
         }
 
+        // 使用rts/cts硬流控
         if (rtscts == 1)
         {
             cfg.c_cflag |= CRTSCTS;
+        }
+
+        // 使用xon/xoff软流控
+        if (xonxoff == 1)
+        {
+            cfg.c_iflag |= IXON;
+            cfg.c_iflag |= IXOFF;
         }
 
 		if (tcsetattr(fd, TCSANOW, &cfg))

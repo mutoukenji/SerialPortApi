@@ -29,6 +29,7 @@ public class Bootstrap {
     private int stopbits;
     private int flags;
     private boolean rtscts;
+    private boolean xonxoff;
     private Logger logger;
     private boolean vvv = false;
     private List<AbstractDecoder> decoders = new ArrayList<>();
@@ -129,16 +130,18 @@ public class Bootstrap {
     }
 
     public Bootstrap configure(String path, int baudrate, int csize, int parity, int stopbits, int flags) {
-        return configure(path, baudrate, csize, parity, stopbits, false, flags);
+        return configure(path, baudrate, csize, parity, stopbits, false, false, flags);
     }
 
-    public Bootstrap configure(String path, int baudrate, int csize, int parity, int stopbits, boolean rtscts, int flags) {
+    public Bootstrap configure(String path, int baudrate, int csize, int parity, int stopbits, boolean rtscts, boolean xonxoff, int flags) {
         this.path = path;
         this.baudrate = baudrate;
         this.csize = csize;
         this.parity = parity;
         this.stopbits = stopbits;
         this.flags = flags;
+        this.rtscts = rtscts;
+        this.xonxoff = xonxoff;
         return this;
     }
 
@@ -185,7 +188,7 @@ public class Bootstrap {
         //创建等待队列
         BlockingQueue<Runnable> bqueue = new ArrayBlockingQueue<>(20);
         workgroup = new ThreadPoolExecutor(2, 10, 5, TimeUnit.SECONDS, bqueue);
-        serialPort = new SerialPort(new File(path), baudrate, csize, parity, stopbits, rtscts, flags);
+        serialPort = new SerialPort(new File(path), baudrate, csize, parity, stopbits, rtscts, xonxoff, flags);
         final InputStream is = serialPort.getInputStream();
         receiveThread = new Thread(new Runnable() {
             @Override
@@ -279,5 +282,13 @@ public class Bootstrap {
                 logger.e(TAG, "Message not handled: data=" + Arrays.toString(data));
             }
         }
+    }
+
+    public boolean isXonxoff() {
+        return xonxoff;
+    }
+
+    public void setXonxoff(boolean xonxoff) {
+        this.xonxoff = xonxoff;
     }
 }
