@@ -95,6 +95,7 @@ JNIEXPORT jobject JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_open
 		jboolean iscopy;
 		const char *path_utf = (*env)->GetStringUTFChars(env, path, &iscopy);
 		LOGD("Opening serial port %s with flags 0x%x", path_utf, O_RDWR | flags);
+
 		fd = open(path_utf, O_RDWR | flags);
 		LOGD("open() fd = %d", fd);
 		(*env)->ReleaseStringUTFChars(env, path, path_utf);
@@ -122,9 +123,6 @@ JNIEXPORT jobject JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_open
 		cfmakeraw(&cfg);
 		cfsetispeed(&cfg, speed);
 		cfsetospeed(&cfg, speed);
-
-		// close CTS/RTS
-		cfg.c_cflag &= ~CRTSCTS;
 
         cfg.c_cflag &= ~CSIZE;
         switch (csize) {
@@ -182,12 +180,19 @@ JNIEXPORT jobject JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_open
         {
             cfg.c_cflag |= CRTSCTS;
         }
+        else
+        {
+            // close CTS/RTS
+            cfg.c_cflag &= ~CRTSCTS;
+        }
 
         // 使用xon/xoff软流控
         if (xonxoff == 1)
         {
-            cfg.c_iflag |= IXON;
-            cfg.c_iflag |= IXOFF;
+            cfg.c_iflag |= IXON | IXOFF | IXANY;
+        }
+        else{
+        	cfg.c_iflag &= ~(IXANY | IXON | IXOFF);
         }
 
 		if (tcsetattr(fd, TCSANOW, &cfg))
@@ -232,3 +237,43 @@ JNIEXPORT void JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_close
 	close(descriptor);
 }
 
+JNIEXPORT void JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_setRtx
+  (JNIEnv *env, jobject thiz, jboolean mark)
+{
+	jclass SerialPortClass = (*env)->GetObjectClass(env, thiz);
+	jclass FileDescriptorClass = (*env)->FindClass(env, "java/io/FileDescriptor");
+
+	jfieldID mFdID = (*env)->GetFieldID(env, SerialPortClass, "mFd", "Ljava/io/FileDescriptor;");
+	jfieldID descriptorID = (*env)->GetFieldID(env, FileDescriptorClass, "descriptor", "I");
+
+	jobject mFd = (*env)->GetObjectField(env, thiz, mFdID);
+	jint descriptor = (*env)->GetIntField(env, mFd, descriptorID);
+
+	int RTS_flag;
+	RTS_flag = TIOCM_RTS;
+	int val;
+	if (mark == 1) {
+		val = TIOCMBIS;
+	}
+	else {
+		val = TIOCMBIC;
+	}
+	ioctl(descriptor, val, &RTS_flag);//Set RTS pin
+}
+
+JNIEXPORT jboolean JNICALL Java_tech_yaog_hardwares_serialport_SerialPort_getCtx
+		(JNIEnv *env, jobject thiz)
+{
+	jclass SerialPortClass = (*env)->GetObjectClass(env, thiz);
+	jclass FileDescriptorClass = (*env)->FindClass(env, "java/io/FileDescriptor");
+
+	jfieldID mFdID = (*env)->GetFieldID(env, SerialPortClass, "mFd", "Ljava/io/FileDescriptor;");
+	jfieldID descriptorID = (*env)->GetFieldID(env, FileDescriptorClass, "descriptor", "I");
+
+	jobject mFd = (*env)->GetObjectField(env, thiz, mFdID);
+	jint descriptor = (*env)->GetIntField(env, mFd, descriptorID);
+
+	int s;
+	ioctl(descriptor, TIOCMGET, &s);
+	return (jboolean) ((s & TIOCM_CTS) != 0);
+}

@@ -92,6 +92,10 @@ public class SerialPort {
 	// JNI
 	private native static FileDescriptor open(String path, int baudrate, int csize, int parity, int stopbits, boolean rtscts, boolean xonxoff, int flags);
 	public native void close();
+
+	public native void setRtx(boolean mark);
+	public native boolean getCtx();
+
 	static {
 		System.loadLibrary("serial_port");
 	}
