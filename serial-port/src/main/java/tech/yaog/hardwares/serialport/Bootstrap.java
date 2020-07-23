@@ -3,10 +3,12 @@ package tech.yaog.hardwares.serialport;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.lang.reflect.ParameterizedType;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -58,6 +60,7 @@ public class Bootstrap {
 
     private SerialPort serialPort;
     private Thread receiveThread;
+    private Thread sendThread;
     private ThreadPoolExecutor workgroup;
     private String path;
     private int baudrate;
@@ -72,6 +75,9 @@ public class Bootstrap {
     private List<AbstractDecoder> decoders = new ArrayList<>();
     private List<AbstractEncoder> encoders = new ArrayList<>();
     private List<AbstractHandler> handlers = new ArrayList<>();
+
+    private final Object sendLock = new Object();
+    private Queue<Object> sendList = new ArrayBlockingQueue<>(50);
 
     private ReceiverStartEvent receiverStartEventListener;
 
@@ -291,9 +297,8 @@ public class Bootstrap {
     /**
      * Send message
      * @param message message to be sent
-     * @return self
      */
-    public Bootstrap send(Object message) {
+    protected void doSend(Object message) {
         byte[] data = null;
         if (message instanceof byte[]) {
             data = (byte[]) message;
@@ -329,6 +334,17 @@ public class Bootstrap {
                 logger.e(TAG, "cannot encode message: %s", message);
             }
         }
+    }
+
+    /**
+     * Send message
+     * @param message message to be sent
+     * @return self
+     */
+    public Bootstrap send(Object message) {
+        synchronized (sendLock) {
+            sendList.offer(message);
+        }
         return this;
     }
 
@@ -363,7 +379,33 @@ public class Bootstrap {
         BlockingQueue<Runnable> bqueue = new ArrayBlockingQueue<>(20);
         workgroup = new ThreadPoolExecutor(2, 10, 5, TimeUnit.SECONDS, bqueue);
         serialPort = new SerialPort(new File(path), baudrate, csize, parity, stopbits, rtscts, xonxoff, flags);
+
         final InputStream is = serialPort.getInputStream();
+        sendThread = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while (!Thread.interrupted()) {
+                    try {
+                        Object toSend = null;
+                        synchronized (sendLock) {
+                            toSend = sendList.poll();
+                        }
+                        if (toSend != null) {
+                            doSend(toSend);
+                        }
+                        else {
+                            Thread.sleep(10);
+                        }
+                    } catch (InterruptedException e) {
+                        break;
+                    }
+                }
+            }
+        });
+        sendThread.setName(path + " Sender");
+        sendThread.setPriority(8);
+        sendThread.start();
+
         receiveThread = new Thread(new Runnable() {
             @Override
             public void run() {
