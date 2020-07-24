@@ -77,7 +77,7 @@ public class Bootstrap {
     private List<AbstractHandler> handlers = new ArrayList<>();
 
     private final Object sendLock = new Object();
-    private Queue<Object> sendList = new ArrayBlockingQueue<>(50);
+    private Queue<Object> sendList = new ArrayBlockingQueue<>(50000);
 
     private ReceiverStartEvent receiverStartEventListener;
 
@@ -388,13 +388,15 @@ public class Bootstrap {
                     try {
                         Object toSend = null;
                         synchronized (sendLock) {
-                            toSend = sendList.poll();
+                            if (!sendList.isEmpty()) {
+                                toSend = sendList.poll();
+                            }
                         }
                         if (toSend != null) {
                             doSend(toSend);
                         }
                         else {
-                            Thread.sleep(10);
+                            Thread.sleep(1);
                         }
                     } catch (InterruptedException e) {
                         break;

@@ -2,6 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
+      <module fileurl="file://$PROJECT_DIR$/.idea/modules/Projects-SerialPortApi.iml" filepath="$PROJECT_DIR$/.idea/modules/Projects-SerialPortApi.iml" group="SerialPortApi" />
       <module fileurl="file://$PROJECT_DIR$/SerialPortApi.iml" filepath="$PROJECT_DIR$/SerialPortApi.iml" group="SerialPortApi" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="SerialPortApi/app" />
       <module fileurl="file://$PROJECT_DIR$/serial-port/serial-port.iml" filepath="$PROJECT_DIR$/serial-port/serial-port.iml" group="SerialPortApi/serial-port" />
