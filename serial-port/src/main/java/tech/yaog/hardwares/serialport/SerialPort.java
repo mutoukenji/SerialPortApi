@@ -28,6 +28,8 @@ public class SerialPort {
 
 	private static final String TAG = SerialPort.class.getName();
 
+	private static String SU = "su";
+
 	public static final int CSIZE_5 = 5;
 	public static final int CSIZE_6 = 6;
 	public static final int CSIZE_7 = 7;
@@ -38,6 +40,10 @@ public class SerialPort {
 	public static final int PARITY_SPACE = 2;
 	public static final int STOP_BIT_1 = 1;
 	public static final int STOP_BIT_2 = 2;
+
+	public static void setSU(String su) {
+		SU = su;
+	}
 
 	/*
 	 * Do not remove or rename the field mFd: it is used by native method close();
@@ -57,10 +63,11 @@ public class SerialPort {
 			try {
 				/* Missing read/write permission, trying to chmod the file */
 				Process su;
-				su = Runtime.getRuntime().exec("/system/bin/su");
+				su = Runtime.getRuntime().exec(SU);
 				String cmd = "chmod 666 " + device.getAbsolutePath() + "\n"
 						+ "exit\n";
 				su.getOutputStream().write(cmd.getBytes());
+				su.getOutputStream().flush();
 				if ((su.waitFor() != 0) || !device.canRead()
 						|| !device.canWrite()) {
 					throw new SecurityException();
