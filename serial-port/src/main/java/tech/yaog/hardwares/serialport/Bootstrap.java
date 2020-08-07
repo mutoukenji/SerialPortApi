@@ -306,15 +306,18 @@ public class Bootstrap {
             if (encoders != null) {
                 for (AbstractEncoder encoder : encoders) {
                     java.lang.reflect.Type[] types = ((ParameterizedType) encoder.getClass().getGenericSuperclass()).getActualTypeArguments();
-                    if (types.length == 1 && message.getClass().equals(types[0])) {
-                        try {
-                            byte[] tmp = encoder.encode(message);
-                            if (tmp != null) {
-                                data = tmp;
-                                break;
+                    if (types.length == 1 && types[0] instanceof Class) {
+                        Class typeClazz = (Class)types[0];
+                        if (typeClazz.isAssignableFrom(message.getClass())) {
+                            try {
+                                byte[] tmp = encoder.encode(message);
+                                if (tmp != null) {
+                                    data = tmp;
+                                    break;
+                                }
+                            } catch (Exception e) {
+                                e.printStackTrace();
                             }
-                        } catch (Exception e) {
-                            e.printStackTrace();
                         }
                     }
                 }
@@ -494,7 +497,7 @@ public class Bootstrap {
         if (handlers != null) {
             for (AbstractHandler handler : handlers) {
                 java.lang.reflect.Type[] types = ((ParameterizedType) handler.getClass().getGenericSuperclass()).getActualTypeArguments();
-                if (types[0] instanceof Class) {
+                if (types.length == 1 && types[0] instanceof Class) {
                     Class typeClazz = (Class) (types[0]);
                     if (typeClazz.isAssignableFrom(message.getClass())) {
                         try {
