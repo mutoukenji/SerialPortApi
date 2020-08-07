@@ -472,7 +472,11 @@ public class Bootstrap {
         serialPort.close();
     }
 
-    private void handle(byte[] data) {
+    /**
+     * 处理被拆包的数据
+     * @param data
+     */
+    protected void handle(byte[] data) {
         Object message = data;
         if (decoders != null) {
             for (AbstractDecoder decoder : decoders) {
@@ -490,13 +494,16 @@ public class Bootstrap {
         if (handlers != null) {
             for (AbstractHandler handler : handlers) {
                 java.lang.reflect.Type[] types = ((ParameterizedType) handler.getClass().getGenericSuperclass()).getActualTypeArguments();
-                if (types.length == 1 && message.getClass().equals(types[0])) {
-                    try {
-                        if ((handled = handler.handle(message, this))) {
-                            break;
+                if (types[0] instanceof Class) {
+                    Class typeClazz = (Class) (types[0]);
+                    if (types.length == 1 && message.getClass().isAssignableFrom(typeClazz)) {
+                        try {
+                            if ((handled = handler.handle(message, this))) {
+                                break;
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
                     }
                 }
             }
