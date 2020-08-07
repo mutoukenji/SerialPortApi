@@ -474,7 +474,7 @@ public class Bootstrap {
 
     /**
      * 处理被拆包的数据
-     * @param data
+     * @param data raw data
      */
     protected void handle(byte[] data) {
         Object message = data;
@@ -496,7 +496,7 @@ public class Bootstrap {
                 java.lang.reflect.Type[] types = ((ParameterizedType) handler.getClass().getGenericSuperclass()).getActualTypeArguments();
                 if (types[0] instanceof Class) {
                     Class typeClazz = (Class) (types[0]);
-                    if (types.length == 1 && message.getClass().isAssignableFrom(typeClazz)) {
+                    if (typeClazz.isAssignableFrom(message.getClass())) {
                         try {
                             if ((handled = handler.handle(message, this))) {
                                 break;
