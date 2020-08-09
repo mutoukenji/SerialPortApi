@@ -45,6 +45,15 @@ public class Bootstrap {
         return this;
     }
 
+    public int getPacketInterval() {
+        return packetInterval;
+    }
+
+    public Bootstrap setPacketInterval(int packetInterval) {
+        this.packetInterval = packetInterval;
+        return this;
+    }
+
     /**
      * 接收进程开始事件
      */
@@ -71,6 +80,7 @@ public class Bootstrap {
     private boolean rtscts;
     private boolean xonxoff;
     private Logger logger;
+    private int packetInterval = 10;
     private boolean vvv = false;
     private List<AbstractDecoder> decoders = new ArrayList<>();
     private List<AbstractEncoder> encoders = new ArrayList<>();
@@ -429,7 +439,7 @@ public class Bootstrap {
                                 emptyCount = 0;
                             }
                             else {
-                                if (++emptyCount >= 10) {
+                                if (++emptyCount >= packetInterval) {
                                     isPack = true;
                                 }
                                 TimeUnit.MILLISECONDS.sleep(1);
