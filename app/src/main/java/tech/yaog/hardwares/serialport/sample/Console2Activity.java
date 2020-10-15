@@ -13,11 +13,11 @@ import java.nio.charset.Charset;
 import java.util.Arrays;
 import java.util.Date;
 
-import tech.yaog.hardwares.serialport.AbstractDecoder;
-import tech.yaog.hardwares.serialport.AbstractEncoder;
-import tech.yaog.hardwares.serialport.AbstractHandler;
 import tech.yaog.hardwares.serialport.Bootstrap;
 import tech.yaog.hardwares.serialport.SerialPort;
+import tech.yaog.utils.aioclient.AbstractHandler;
+import tech.yaog.utils.aioclient.StringDecoder;
+import tech.yaog.utils.aioclient.encoder.StringEncoder;
 
 /**
  * Created by mutoukenji on 17-8-12.
@@ -49,41 +49,42 @@ public class Console2Activity extends Activity {
         int stopbits = Integer.parseInt(sp.getString("STOPBITS", SerialPort.STOP_BIT_1+""));
         bootstrap = new Bootstrap()
                 .configure(path, baudrate, csize, parity, stopbits, 0)
-                .decode(new AbstractDecoder<String>() {
+                .decoders(new StringDecoder(Charset.forName("UTF-8")))
+                .encoders(new StringEncoder(Charset.forName("UTF-8")))
+                .handlers(new AbstractHandler<String>() {
                     @Override
-                    public String decode(byte[] data) {
-                        try {
-                            return new String(data, "UTF-8");
-                        } catch (UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                        }
-                        return null;
-                    }
-                })
-                .encode(new AbstractEncoder<String>() {
-                    @Override
-                    public byte[] encode(String message) {
-                        try {
-                            return message.getBytes("UTF-8");
-                        } catch (UnsupportedEncodingException e) {
-                            e.printStackTrace();
-                        }
-                        return null;
-                    }
-                })
-                .handle(new AbstractHandler<String>() {
-                    @Override
-                    public boolean handle(final String message, Bootstrap client) {
-                        final String re = "recv: "+message;
-                        client.send(re);
+                    public boolean handle(final String msg) {
+                        final String re = "recv: "+msg;
+                        bootstrap.send(re);
                         handler.post(new Runnable() {
-                                         @Override
-                                         public void run() {
-                                             mReception.append(new Date().toString() + " Rx:" + message + "\n");
-                                             mReception.append(new Date().toString() + " Tx:" + re + "\n");
-                                         }
-                                     });
+                            @Override
+                            public void run() {
+                                mReception.append(new Date().toString() + " Rx:" + msg + "\n");
+                                mReception.append(new Date().toString() + " Tx:" + re + "\n");
+                            }
+                        });
                         return true;
+                    }
+                })
+                .onEvent(new tech.yaog.utils.aioclient.Bootstrap.Event() {
+                    @Override
+                    public void onConnected() {
+
+                    }
+
+                    @Override
+                    public void onDisconnected() {
+
+                    }
+
+                    @Override
+                    public void onSent() {
+
+                    }
+
+                    @Override
+                    public void onReceived() {
+
                     }
                 })
                 .start();
@@ -93,7 +94,7 @@ public class Console2Activity extends Activity {
     protected void onStop() {
         super.onStop();
         if (bootstrap != null) {
-            bootstrap.stop();
+            bootstrap.disconnect();
         }
     }
 }

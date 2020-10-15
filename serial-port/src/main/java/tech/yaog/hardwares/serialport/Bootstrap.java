@@ -4,21 +4,19 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.ParameterizedType;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Queue;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+
+import tech.yaog.utils.aioclient.AbstractDecoder;
+import tech.yaog.utils.aioclient.AbstractEncoder;
+import tech.yaog.utils.aioclient.AbstractHandler;
+import tech.yaog.utils.aioclient.AbstractSplitter;
+import tech.yaog.utils.aioclient.io.IO;
 
 /**
  * 串口通讯启动器
  * Created by mutoukenji on 17-8-12.
  */
-public class Bootstrap {
+public class Bootstrap extends tech.yaog.utils.aioclient.Bootstrap {
 
     private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
     private static String bytesToHex(byte[] bytes) {
@@ -31,37 +29,8 @@ public class Bootstrap {
         return new String(hexChars);
     }
 
-    public ReceiverStartEvent getReceiverStartEventListener() {
-        return receiverStartEventListener;
-    }
-
-    /**
-     * 注册接收进程开始事件监听
-     * @param receiverStartEventListener 接收进程开始事件监听
-     * @return self
-     */
-    public Bootstrap setReceiverStartEventListener(ReceiverStartEvent receiverStartEventListener) {
-        this.receiverStartEventListener = receiverStartEventListener;
-        return this;
-    }
-
-    /**
-     * 接收进程开始事件
-     */
-    public interface ReceiverStartEvent {
-        /**
-         * 接收进程开始
-         * @param bootstrap 对应的 Bootstrap
-         */
-        void receiverStarted(Bootstrap bootstrap);
-    }
-
     private static final String TAG = Bootstrap.class.getName();
 
-    private SerialPort serialPort;
-    private Thread receiveThread;
-    private Thread sendThread;
-    private ThreadPoolExecutor workgroup;
     private String path;
     private int baudrate;
     private int csize;
@@ -72,14 +41,51 @@ public class Bootstrap {
     private boolean xonxoff;
     private Logger logger;
     private boolean vvv = false;
-    private List<AbstractDecoder> decoders = new ArrayList<>();
-    private List<AbstractEncoder> encoders = new ArrayList<>();
-    private List<AbstractHandler> handlers = new ArrayList<>();
 
-    private final Object sendLock = new Object();
-    private Queue<Object> sendList = new ArrayBlockingQueue<>(50000);
+    @Override
+    public Bootstrap onEvent(Event eventListener) {
+        return (Bootstrap) super.onEvent(eventListener);
+    }
 
-    private ReceiverStartEvent receiverStartEventListener;
+    @Override
+    public Bootstrap exceptionHandler(ExceptionHandler exceptionHandler) {
+        return (Bootstrap) super.exceptionHandler(exceptionHandler);
+    }
+
+    @Override
+    public Bootstrap addDecoder(AbstractDecoder<?> decoder) {
+        return (Bootstrap) super.addDecoder(decoder);
+    }
+
+    @Override
+    public Bootstrap decoders(AbstractDecoder<?>... decoders) {
+        return (Bootstrap) super.decoders(decoders);
+    }
+
+    @Override
+    public Bootstrap addEncoder(AbstractEncoder<?> encoder) {
+        return (Bootstrap) super.addEncoder(encoder);
+    }
+
+    @Override
+    public Bootstrap encoders(AbstractEncoder<?>... encoders) {
+        return (Bootstrap) super.encoders(encoders);
+    }
+
+    @Override
+    public Bootstrap addHandler(AbstractHandler<?> handler) {
+        return (Bootstrap) super.addHandler(handler);
+    }
+
+    @Override
+    public Bootstrap handlers(AbstractHandler<?>... handlers) {
+        return (Bootstrap) super.handlers(handlers);
+    }
+
+    @Override
+    public Bootstrap splitter(AbstractSplitter splitter) {
+        return (Bootstrap) super.splitter(splitter);
+    }
 
     /**
      * Get device path
@@ -214,48 +220,6 @@ public class Bootstrap {
     }
 
     /**
-     * Set decoder methods
-     * @param decoders decoder methods
-     * @return self
-     */
-    public Bootstrap decode(AbstractDecoder... decoders) {
-        for (AbstractDecoder decoder : decoders) {
-            if (!this.decoders.contains(decoder)) {
-                this.decoders.add(decoder);
-            }
-        }
-        return this;
-    }
-
-    /**
-     * Set encoder methods
-     * @param encoders encoder methods
-     * @return self
-     */
-    public Bootstrap encode(AbstractEncoder... encoders) {
-        for (AbstractEncoder encoder : encoders) {
-            if (!this.encoders.contains(encoder)) {
-                this.encoders.add(encoder);
-            }
-        }
-        return this;
-    }
-
-    /**
-     * Set data handlers
-     * @param handlers data handlers
-     * @return self
-     */
-    public Bootstrap handle(AbstractHandler... handlers) {
-        for (AbstractHandler handler : handlers) {
-            if (!this.handlers.contains(handler)) {
-                this.handlers.add(handler);
-            }
-        }
-        return this;
-    }
-
-    /**
      * Create {@code Bootstrap} with parameters
      * Flow control is disabled
      * @param path Device path
@@ -295,227 +259,17 @@ public class Bootstrap {
     }
 
     /**
-     * Send message
-     * @param message message to be sent
-     */
-    protected void doSend(Object message) {
-        byte[] data = null;
-        if (message instanceof byte[]) {
-            data = (byte[]) message;
-        } else {
-            if (encoders != null) {
-                for (AbstractEncoder encoder : encoders) {
-                    java.lang.reflect.Type[] types = ((ParameterizedType) encoder.getClass().getGenericSuperclass()).getActualTypeArguments();
-                    if (types.length == 1 && types[0] instanceof Class) {
-                        Class typeClazz = (Class)types[0];
-                        if (typeClazz.isAssignableFrom(message.getClass())) {
-                            try {
-                                byte[] tmp = encoder.encode(message);
-                                if (tmp != null) {
-                                    data = tmp;
-                                    break;
-                                }
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        if (data != null) {
-            try {
-                serialPort.getOutputStream().write(data);
-                if (vvv && logger != null) {
-                    logger.v(TAG, "Tx: %s", bytesToHex(data));
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            if (logger != null) {
-                logger.e(TAG, "cannot encode message: %s", message);
-            }
-        }
-    }
-
-    /**
-     * Send message
-     * @param message message to be sent
-     * @return self
-     */
-    public Bootstrap send(Object message) {
-        synchronized (sendLock) {
-            sendList.offer(message);
-        }
-        return this;
-    }
-
-    /**
-     * Set rtx mark manually
-     * @param mark rtx status
-     */
-    public void setRtx(boolean mark) {
-        if (serialPort != null) {
-            serialPort.setRtx(mark);
-        }
-    }
-
-    /**
-     * Get ctx mark manually
-     * @return ctx status
-     */
-    public boolean getCtx() {
-        if (serialPort != null) {
-            return serialPort.getCtx();
-        }
-        return false;
-    }
-
-    /**
      * Open serial port and start handling
      * @return self
-     * @throws IOException serial port open failed
      */
-    public Bootstrap start() throws IOException {
-        //创建等待队列
-        BlockingQueue<Runnable> bqueue = new ArrayBlockingQueue<>(20);
-        workgroup = new ThreadPoolExecutor(2, 10, 5, TimeUnit.SECONDS, bqueue);
-        serialPort = new SerialPort(new File(path), baudrate, csize, parity, stopbits, rtscts, xonxoff, flags);
+    public Bootstrap start() {
 
-        final InputStream is = serialPort.getInputStream();
-        sendThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (!Thread.interrupted()) {
-                    try {
-                        Object toSend = null;
-                        synchronized (sendLock) {
-                            if (!sendList.isEmpty()) {
-                                toSend = sendList.poll();
-                            }
-                        }
-                        if (toSend != null) {
-                            doSend(toSend);
-                        }
-                        else {
-                            Thread.sleep(1);
-                        }
-                    } catch (InterruptedException e) {
-                        break;
-                    }
-                }
-            }
-        });
-        sendThread.setName(path + " Sender");
-        sendThread.setPriority(8);
-        sendThread.start();
+        String url = path+":"+baudrate+":"+csize+":"+stopbits+":"+parity+":"+(rtscts?"1":(xonxoff?"2":"0"))+":"+flags;
+        ioClass(SerialPortIO.class);
 
-        receiveThread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                byte[] buffer = new byte[1024 * 1024];
-                while (!Thread.interrupted()) {
-                    try {
-                        byte[] data = new byte[0];
-                        int read;
-                        boolean isPack = false;
-                        int emptyCount = 0;
-                        do {
-                            if (is.available() > 0 && (read = is.read(buffer)) > 0) {
-                                int position = data.length;
-                                data = Arrays.copyOf(data, position + read);
-                                System.arraycopy(buffer, 0, data, position, read);
-                                emptyCount = 0;
-                            }
-                            else {
-                                if (++emptyCount >= 10) {
-                                    isPack = true;
-                                }
-                                TimeUnit.MILLISECONDS.sleep(1);
-                            }
-                        }
-                        while (!isPack);
-                        if (data.length > 0) {
-                            if (vvv && logger != null) {
-                                logger.v(TAG, "Rx: %s", bytesToHex(data));
-                            }
-                            final byte[] h_data = data;
-                            workgroup.execute(new Runnable() {
-                                @Override
-                                public void run() {
-                                    handle(h_data);
-                                }
-                            });
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    } catch (InterruptedException e) {
-                        break;
-                    }
-                }
-            }
-        });
-        receiveThread.setName(path + " Receiver");
-        receiveThread.setPriority(Thread.MAX_PRIORITY);
-        receiveThread.start();
-        if (receiverStartEventListener != null) {
-            receiverStartEventListener.receiverStarted(this);
-        }
+        connect(url);
 
         return this;
-    }
-
-    /**
-     * Close serial port and stop all handling
-     */
-    public void stop() {
-        receiveThread.interrupt();
-        workgroup.shutdown();
-        serialPort.close();
-    }
-
-    /**
-     * 处理被拆包的数据
-     * @param data raw data
-     */
-    protected void handle(byte[] data) {
-        Object message = data;
-        if (decoders != null) {
-            for (AbstractDecoder decoder : decoders) {
-                try {
-                    Object tmp = decoder.decode(data);
-                    if (tmp != null) {
-                        message = tmp;
-                        break;
-                    }
-                } catch (Exception ignored) {
-                }
-            }
-        }
-        boolean handled = false;
-        if (handlers != null) {
-            for (AbstractHandler handler : handlers) {
-                java.lang.reflect.Type[] types = ((ParameterizedType) handler.getClass().getGenericSuperclass()).getActualTypeArguments();
-                if (types.length == 1 && types[0] instanceof Class) {
-                    Class typeClazz = (Class) (types[0]);
-                    if (typeClazz.isAssignableFrom(message.getClass())) {
-                        try {
-                            if ((handled = handler.handle(message, this))) {
-                                break;
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                }
-            }
-        }
-        if (!handled) {
-            if (logger != null) {
-                logger.e(TAG, "Message not handled: data=" + Arrays.toString(data));
-            }
-        }
     }
 
     /**
@@ -532,5 +286,97 @@ public class Bootstrap {
      */
     public void setXonxoff(boolean xonxoff) {
         this.xonxoff = xonxoff;
+    }
+
+    class SerialPortIO extends IO {
+
+        private SerialPort serialPort;
+        private Thread receiveThread;
+
+        public SerialPortIO(Callback callback) {
+            super(callback);
+        }
+
+        @Override
+        public boolean connect(String remote) {
+            String[] blocks = remote.split(":");
+            if (blocks.length >= 7) {
+                String path = blocks[0];
+                int baudrate = Integer.parseInt(blocks[1]);
+                int csize = Integer.parseInt(blocks[2]);
+                int stopbit = Integer.parseInt(blocks[3]);
+                int parity = Integer.parseInt(blocks[4]);
+                int flowcontrol = Integer.parseInt(blocks[5]);
+                int flags = Integer.parseInt(blocks[6]);
+
+                try {
+                    serialPort = new SerialPort(new File(path), baudrate, csize, parity, stopbit, flowcontrol == 1, flowcontrol == 2, flags);
+                    callback.onConnected();
+                    return true;
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            }
+            else {
+                return false;
+            }
+        }
+
+        @Override
+        public void disconnect() {
+            serialPort.close();
+        }
+
+        @Override
+        public void beginRead() {
+            receiveThread = new Thread(new Runnable() {
+                @Override
+                public void run() {
+                    InputStream is = serialPort.getInputStream();
+                    byte[] buffer = new byte[1024 * 1024];
+                    while (!Thread.interrupted()) {
+                        try {
+                            int read = is.read(buffer);
+                            if (read > 0) {
+                                byte[] data = Arrays.copyOf(buffer, read);
+                                if (data.length > 0) {
+                                    if (vvv && logger != null) {
+                                        logger.v(TAG, "Rx: %s", bytesToHex(data));
+                                    }
+                                    callback.onReceived(data);
+                                }
+                            }
+                            else if (read < 0) {
+                                callback.onDisconnected();
+                                break;
+                            }
+                        } catch (IOException e) {
+                            callback.onDisconnected();
+                            break;
+                        }
+                    }
+                }
+            });
+            receiveThread.setName(path + " Receiver");
+            receiveThread.setPriority(Thread.MAX_PRIORITY);
+            receiveThread.start();
+        }
+
+        @Override
+        public void stopRead() {
+            receiveThread.interrupt();
+        }
+
+        @Override
+        public void write(byte[] bytes) {
+            try {
+                OutputStream os = serialPort.getOutputStream();
+                os.write(bytes);
+                os.flush();
+            } catch (IOException e) {
+                callback.onException(e);
+            }
+        }
     }
 }
