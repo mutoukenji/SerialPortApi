@@ -12,11 +12,11 @@ import android.widget.TextView;
 import java.io.IOException;
 import java.util.Date;
 
-import tech.yaog.hardwares.serialport.AbstractDecoder;
-import tech.yaog.hardwares.serialport.AbstractEncoder;
-import tech.yaog.hardwares.serialport.AbstractHandler;
 import tech.yaog.hardwares.serialport.Bootstrap;
 import tech.yaog.hardwares.serialport.SerialPort;
+import tech.yaog.utils.aioclient.AbstractDecoder;
+import tech.yaog.utils.aioclient.AbstractEncoder;
+import tech.yaog.utils.aioclient.AbstractHandler;
 
 public class PaymentActivity extends Activity implements View.OnClickListener {
 
@@ -51,7 +51,7 @@ public class PaymentActivity extends Activity implements View.OnClickListener {
         int stopbits = Integer.parseInt(sp.getString("STOPBITS", SerialPort.STOP_BIT_1+""));
         bootstrap = new Bootstrap()
                 .configure(path, baudrate, csize, parity, stopbits, 0)
-                .decode(new AbstractDecoder<HelloCommand>() {
+                .addDecoder(new AbstractDecoder<HelloCommand>() {
                     @Override
                     public HelloCommand decode(byte[] data) {
                         PayFrame frame = PayFrame.fromBytes(data);
@@ -61,7 +61,7 @@ public class PaymentActivity extends Activity implements View.OnClickListener {
                         return null;
                     }
                 })
-                .decode(new AbstractDecoder<SelectCommand>() {
+                .decoders(new AbstractDecoder<SelectCommand>() {
                     @Override
                     public SelectCommand decode(byte[] data) {
                         PayFrame frame = PayFrame.fromBytes(data);
@@ -71,16 +71,16 @@ public class PaymentActivity extends Activity implements View.OnClickListener {
                         return null;
                     }
                 })
-                .encode(new AbstractEncoder<PayReplyFrame>() {
+                .encoders(new AbstractEncoder<PayReplyFrame>() {
                     @Override
                     public byte[] encode(PayReplyFrame message) {
                         return message.toBytes();
                     }
                 })
-                .handle(new AbstractHandler<HelloCommand>() {
+                .addHandler(new AbstractHandler<HelloCommand>() {
                     @Override
-                    public boolean handle(HelloCommand message, Bootstrap client) {
-                        client.send(new HelloReplyCommand("0000", HelloReplyCommand.RESULT_OK).toFrame());
+                    public boolean handle(HelloCommand helloCommand) {
+                        bootstrap.send(new HelloReplyCommand("0000", HelloReplyCommand.RESULT_OK).toFrame());
                         handler.post(new Runnable() {
                             @Override
                             public void run() {
@@ -93,11 +93,11 @@ public class PaymentActivity extends Activity implements View.OnClickListener {
                         return true;
                     }
                 })
-                .handle(new AbstractHandler<SelectCommand>() {
+                .addHandler(new AbstractHandler<SelectCommand>() {
                     @Override
-                    public boolean handle(SelectCommand message, Bootstrap client) {
+                    public boolean handle(SelectCommand message) {
                         if (sel > 0) {
-                            client.send(new SelectReplyCommand(SelectReplyCommand.RESULT_OK, (byte) 0x00, (byte) sel).toFrame());
+                            bootstrap.send(new SelectReplyCommand(SelectReplyCommand.RESULT_OK, (byte) 0x00, (byte) sel).toFrame());
                             handler.post(new Runnable() {
                                 @Override
                                 public void run() {
@@ -109,7 +109,7 @@ public class PaymentActivity extends Activity implements View.OnClickListener {
                             });
                         }
                         else {
-                            client.send(new SelectReplyCommand(SelectReplyCommand.RESULT_NG, (byte) 0x00, (byte) 0x00).toFrame());
+                            bootstrap.send(new SelectReplyCommand(SelectReplyCommand.RESULT_NG, (byte) 0x00, (byte) 0x00).toFrame());
                             handler.post(new Runnable() {
                                 @Override
                                 public void run() {
@@ -130,7 +130,7 @@ public class PaymentActivity extends Activity implements View.OnClickListener {
     protected void onStop() {
         super.onStop();
         if (bootstrap != null) {
-            bootstrap.stop();
+            bootstrap.disconnect();
         }
     }
 
