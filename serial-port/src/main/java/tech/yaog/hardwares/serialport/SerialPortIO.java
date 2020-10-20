@@ -105,6 +105,9 @@ public class SerialPortIO extends IO {
             OutputStream os = serialPort.getOutputStream();
             os.write(bytes);
             os.flush();
+            if (Config.vvv && Config.logger != null) {
+                Config.logger.v("SerialPortIO", "Tx: %s", bytesToHex(bytes));
+            }
         } catch (IOException e) {
             callback.onException(e);
         }
