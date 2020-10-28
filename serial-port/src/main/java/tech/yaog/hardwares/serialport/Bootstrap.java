@@ -247,14 +247,20 @@ public class Bootstrap extends tech.yaog.utils.aioclient.Bootstrap {
 
     /**
      * Open serial port and start handling
+     *
+     * @throws RuntimeException connect failed
      * @return self
      */
-    public Bootstrap start() {
+    public Bootstrap start() throws RuntimeException {
 
         String url = path+":"+baudrate+":"+csize+":"+stopbits+":"+parity+":"+(rtscts?"1":(xonxoff?"2":"0"))+":"+flags;
         ioClass(SerialPortIO.class);
 
-        connect(url);
+        boolean ret = connect(url);
+
+        if (!ret) {
+            throw new RuntimeException("ConnectFailed");
+        }
 
         return this;
     }
