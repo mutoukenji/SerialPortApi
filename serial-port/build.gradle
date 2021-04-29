@@ -51,7 +51,7 @@ android {
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    api 'tech.yaog.utils:aio-client:1.1.4'
+    api 'com.github.mutoukenji:AIOClient:1.1.4'
 }
 
 tasks.withType(JavaCompile) {
@@ -61,6 +61,3 @@ tasks.withType(JavaCompile) {
 tasks.withType(Javadoc) {
     options.encoding = 'UTF-8'
 }
-
-apply from: 'installv1.gradle'
-apply from: 'bintrayv1.gradle'
